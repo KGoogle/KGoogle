@@ -186,8 +186,11 @@
             box-sizing: border-box;
             opacity: 0;
             transform: translateY(-10px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
+            transition: opacity 0.4s ease, transform 0.4s ease, left 0.4s ease;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 120px); 
         }
 
         #info-box.visible {
@@ -200,15 +203,36 @@
             margin: 0 0 10px 0;
             font-size: 1.2em;
             color: #00aaff;
+            flex-shrink: 0;
         }
-
-        #info-box p {
+        
+        #info-description {
             margin: 0;
             font-size: 0.9em;
             line-height: 1.6;
             color: #ddd;
             white-space: pre-wrap;
             font-family: monospace, sans-serif;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        #info-description::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #info-description::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        #info-description::-webkit-scrollbar-thumb {
+            background: rgba(0, 170, 255, 0.5);
+            border-radius: 4px;
+        }
+
+        #info-description::-webkit-scrollbar-thumb:hover {
+            background: rgba(85, 204, 255, 0.8);
         }
 
         #info-box strong {
@@ -228,6 +252,18 @@
         #info-box .glia-type {
             color: #55ccff;
             font-weight: bold;
+        }
+        
+        @media (max-width: 600px) {
+            #info-box {
+                left: 50%;
+                width: 90vw;
+                transform: translateX(-50%) translateY(-10px);
+            }
+
+            #info-box.visible {
+                transform: translateX(-50%) translateY(0);
+            }
         }
     </style>
 </head>
@@ -429,11 +465,13 @@
             updateControlsUI();
         }
 
-        function updateControlsUI() {
+        function updateControlsUI(resetScroll = true) {
             const wrapper = document.querySelector('#controls-container .controls-content-wrapper');
             wrapper.innerHTML = '';
 
-            setTimeout(() => { document.getElementById('controls-container').scrollLeft = 0; }, 50);
+            if (resetScroll) {
+                setTimeout(() => { document.getElementById('controls-container').scrollLeft = 0; }, 50);
+            }
 
             const backButton = document.createElement('button');
             backButton.classList.add('control-button');
@@ -447,7 +485,7 @@
                     infoBox.classList.remove('visible');
                     const previousNode = navigationStack.length > 0 ? navigationStack[navigationStack.length - 1] : null;
                     onStructureSelect(previousNode ? (previousNode.ids || null) : null, false);
-                    updateControlsUI();
+                    updateControlsUI(true);
                 };
             } else {
                 backButton.innerText = '전체 보기';
@@ -489,6 +527,7 @@
                             onStructureSelect(null, false);
                             infoTitle.innerText = item.info.title;
                             infoDescription.innerHTML = item.info.content;
+                            infoDescription.scrollTop = 0;
                             infoBox.classList.add('visible');
                             wrapper.querySelectorAll('.control-button').forEach(btn => btn.classList.remove('active'));
                             e.target.classList.add('active');
@@ -507,6 +546,7 @@
                             if (item.description) {
                                 infoTitle.innerText = item.title;
                                 infoDescription.innerText = item.description;
+                                infoDescription.scrollTop = 0;
                                 infoBox.classList.add('visible');
                             } else {
                                 infoBox.classList.remove('visible');
@@ -514,7 +554,7 @@
 
                             const nodeToPush = item.key ? CLASSIFICATION_SYSTEMS[item.key] : item;
                             navigationStack.push(nodeToPush);
-                            updateControlsUI();
+                            updateControlsUI(false);
                         }
                     };
                 }
@@ -530,9 +570,9 @@
             if (resetUI) {
                 navigationStack = [];
                 infoBox.classList.remove('visible');
-                updateControlsUI();
+                updateControlsUI(true);
             } else if (previousSelection !== activeSelection) {
-                updateControlsUI();
+                updateControlsUI(false); 
             }
 
             if (selection && !Array.isArray(selection)) {
@@ -550,6 +590,7 @@
                     if (structureInfo) {
                         infoTitle.innerText = structureInfo.name;
                         infoDescription.innerText = structureInfo.description;
+                        infoDescription.scrollTop = 0;
                         infoBox.classList.add('visible');
                     } else {
                         infoBox.classList.remove('visible');
