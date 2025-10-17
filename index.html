@@ -1,215 +1,694 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>뇌 모델</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000000; color: #fff; font-family: sans-serif; }
-        canvas { display: block; }
-        #loader {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.5em;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #disclaimer-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            transition: opacity 0.5s ease;
+        }
+
+        .disclaimer-box {
+            position: relative;
+            max-width: 450px;
+            padding: 30px 35px;
+            background-color: rgba(10, 10, 20, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.2);
+        }
+
+        .disclaimer-box h3 {
+            margin: 0 0 15px 0;
+            color: #00aaff;
+            font-size: 1.4em;
+        }
+
+        .disclaimer-box p {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        #close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 2.2em;
+            font-weight: 300;
+            color: #aaa;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.5;
+            transition: color 0.3s, transform 0.3s, opacity 0.3s;
+            cursor: wait;
+            pointer-events: none;
+        }
+
+        #close-button.enabled {
+            opacity: 1;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        #close-button.enabled:hover {
+            color: #fff;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        #controls-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 0;
+            box-sizing: border-box;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            cursor: grab;
+            user-select: none;
+            scroll-behavior: smooth;
+        }
+
+        #controls-container.active-drag {
+            cursor: grabbing;
+            scroll-behavior: auto;
+        }
+
+        #controls-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .controls-content-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .button-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .divider {
+            width: 1px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
+        }
+
+        .control-button {
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s, color 0.3s;
+            font-size: 14px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .control-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-button.active {
+            background-color: #007bff;
+            border-color: #007bff;
+            font-weight: bold;
+        }
+
+        .control-button.placeholder {
+            color: #777;
+            background-color: rgba(50, 50, 50, 0.2);
+            border-color: rgba(100, 100, 100, 0.5);
+            cursor: not-allowed;
+        }
+
+        .control-button.placeholder:hover {
+            transform: none;
+        }
+
+        #info-box {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            max-width: 480px;
+            padding: 15px 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            box-sizing: border-box;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none;
+        }
+
+        #info-box.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        #info-box h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #00aaff;
+        }
+
+        #info-box p {
+            margin: 0;
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #ddd;
+            white-space: pre-wrap;
+            font-family: monospace, sans-serif;
+        }
+
+        #info-box strong {
+            color: #55ccff;
+        }
+
+        #info-box .primary-vesicle {
+            color: #00aaff;
+            font-weight: bold;
+        }
+
+        #info-box .secondary-vesicle {
+            color: #55ccff;
+        }
+
+        #info-box .neuron-term,
+        #info-box .glia-type {
+            color: #55ccff;
+            font-weight: bold;
         }
     </style>
 </head>
+
 <body>
-    <div id="loader">데이터 로딩 중...</div>
+    <div id="disclaimer-screen">
+        <div class="disclaimer-box">
+            <button id="close-button">&times;</button>
+            <h3>주의</h3>
+            <p>본 자료는 과학 데이터를 기반으로 제작되었으나, 비전문가에 의해 구현되어 학술적으로 부정확 할 수 있습니다.</p>
+        </div>
+    </div>
+
+    <div id="info-box">
+        <h2 id="info-title"></h2>
+        <p id="info-description"></p>
+    </div>
+
+    <div id="controls-container"></div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
 
-<script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-    let scene, camera, renderer, controls, brainGroup, composer;
-    let brainParticles;
-    const mouse = new THREE.Vector2(-100, -100);
-    const raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 1.5; 
+        let scene, camera, renderer, controls, brainGroup, composer, bloomPass;
+        let brainParticles, brainLines, partInfo = {};
+        let targetCameraPos = new THREE.Vector3(), targetControlsTarget = new THREE.Vector3();
+        let isAnimatingCamera = false;
+        let activeSelection = null;
+        let navigationStack = [];
 
-    function init() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000);
-        scene.fog = new THREE.FogExp2(0x000000, 0.007);
+        const structureMap = {
+            1: { name: '뇌간 (Brainstem)', description: '중뇌(midbrain), 교뇌(pons), 연수(medulla oblongata)로 구성되며 대뇌와 척수를 연결합니다. 호흡, 심박수, 혈압, 체온 조절 등 생명 유지에 필수적인 자율신경 기능을 담당하며, 각성과 수면 주기를 조절하는 데 중요한 역할을 합니다.' },
+            2: { name: '시상 (Thalamus)', description: '후각을 제외한 모든 감각 정보(시각, 청각, 촉각 등)를 대뇌 피질의 해당 영역으로 전달하는 핵심적인 중계소입니다. 또한, 운동 신호 조절, 의식, 수면 및 각성 상태 유지에도 관여합니다.' },
+            6: { name: '소뇌 (Cerebellum)', description: '\'작은 뇌\'로 불리며, 주로 운동 기능의 정밀한 조절, 평형 감각 유지, 운동 학습(motor learning)에 관여합니다. 최근 연구에서는 언어, 주의 등 일부 인지 기능에도 기여하는 것으로 알려져 있습니다.' },
+            7: { name: '전두엽 (Frontal Lobe)', description: '대뇌 피질의 가장 큰 부분으로, 고등 인지 기능인 집행 기능(Executive functions)을 총괄합니다. 이는 계획 수립, 의사 결정, 문제 해결, 작업 기억, 감정 및 충동 조절, 사회적 행동 등을 포함합니다.' },
+            8: { name: '두정엽 (Parietal Lobe)', description: '중심고랑(central sulcus) 뒤쪽에 위치하며, 촉각, 압력, 통증, 온도와 같은 체성 감각 정보를 처리하고 통합합니다. 또한 공간 인식, 시각-운동 협응, 수리 및 논리적 사고에 중요한 역할을 담당합니다.' },
+            9: { name: '측두엽 (Temporal Lobe)', description: '외측고랑(lateral sulcus) 아래에 위치하며, 청각 정보의 일차적 처리, 언어 이해(베르니케 영역), 시각적 기억, 얼굴 및 사물 인식, 그리고 감정 처리와 관련된 핵심 영역입니다.' },
+            10: { name: '후두엽 (Occipital Lobe)', description: '대뇌 반구의 가장 뒤쪽에 위치하며, 전적으로 시각 정보 처리에 특화된 영역입니다. 색상, 형태, 움직임 등 시각적 요소들을 분석하고 해석하는 일차 시각 피질(V1)을 포함합니다.' },
+            11: { name: '시상하부 (Hypothalamus)', description: '시상 아래에 위치하며, 뇌하수체를 통해 신경계와 내분비계를 연결하는 핵심적인 역할을 합니다. 체온, 배고픔, 갈증, 피로, 수면-각성 주기 등 항상성 유지를 위한 자율신경계 기능을 조절합니다.' }
+        };
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 280);
+        const CLASSIFICATION_SYSTEMS = {
+            basic_structure: {
+                title: '신경계',
+                type: 'info_content',
+                info: {
+                    title: '신경계',
+    content: `뇌를 포함한 신경계는 기능과 구조가 다른 두 가지 주요 세포 유형으로 구성됩니다.
 
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
+<span class="neuron-term">신경 조직</span>
+├─ <span class="neuron-term">신경세포 (Neuron)</span> - 정보 처리 및 전달
+│  ├─ <strong>수상돌기 (Dendrites):</strong> 신호 수신
+│  ├─ <strong>세포체 (Soma):</strong> 신호 통합, 생명 활동
+│  └─ <strong>축삭 (Axon):</strong> 신호 전달
+│      ↳ <strong>시냅스 (Synapse):</strong> 신경전달
+│
+└─ <span class="glia-type">교세포 (Glia)</span> - 지지, 관리, 최적화
+    ├─ <strong>중추신경계 (CNS) 교세포</strong>
+    │ ├─ 성상교세포 (Astrocyte)
+    │ ├─ 희소돌기아교세포 (Oligodendrocyte)
+    │ ├─ 미세아교세포 (Microglia)
+    │ └─ 뇌실막세포 (Ependymal cell)
+    │
+    └─ <strong>말초신경계 (PNS) 교세포</strong>
+       ├─ 슈반세포 (Schwann cell)
+       └─ 위성세포 (Satellite cell)`
+                }
+            },
+            embryological: {
+                title: '발생학적 분류', type: 'info_content',
+                info: {
+                    title: '발생학적 분류',
+                    content:
+                        `신경관에서 3개의<span class="primary-vesicle"> 1차 뇌 소포</span>로 이것이 다시 5개의<span class="secondary-vesicle"> 2차 뇌 소포</span>로 분화, 발달하여 형성합니다.
 
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.minDistance = 80; 
-        controls.maxDistance = 350; 
-        controls.enablePan = false;
-        
-        const renderScene = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0;
-        bloomPass.strength = 1.2;
-        bloomPass.radius = 0.5;
+신경관 (Neural Tube)
+├─ <span class="primary-vesicle">앞/전뇌 (Prosencephalon / Forebrain)</span>
+│  ├─ <span class="secondary-vesicle">끝/종뇌 (Telencephalon)</span>
+│  │  └─ 대뇌 (Cerebral)
+│  └─ <span class="secondary-vesicle">사이/간뇌 (Diencephalon)</span>
+│     └─ 시상,시상하부,망막,시신경 등
+│
+├─ <span class="primary-vesicle">중간/중뇌 (Mesencephalon / Midbrain)</span>
+│  └─ <span class="secondary-vesicle">유지</span>
+│
+└─ <span class="primary-vesicle">마름/능형뇌 (Rhombencephalon / Hindbrain)</span>
+   ├─ <span class="secondary-vesicle">뒤/후뇌 (Metencephalon)</span>
+   │  └─ 소뇌 (Cerebellum), 다리/교뇌 (Pons)
+   └─ <span class="secondary-vesicle">수뇌 (Myencephalon)</span>
+      └─ 숨뇌/연수 (Medulla oblongata)
+      
+<strong>해부학적 분류 : 대뇌,간뇌,소뇌,뇌줄기/간(중뇌+교뇌+연수)</strong>`
+                }
+            },
+            anatomical: {
+                title: '해부학적 분류(검토 필요)', type: 'hierarchy',
+                children: [
+                    {
+                        title: '대뇌 (Cerebrum)',
+                        ids: [0, 7, 8, 9, 10],
+                        description: '뇌의 가장 큰 부분으로, 고등 정신 기능을 담당합니다. 표면은 기능에 따라 전두엽, 두정엽, 측두엽, 후두엽의 4개의 주요 엽으로 구분됩니다.',
+                        children: [
+                           { title: '전두엽', ids: [7] },
+                           { title: '두정엽', ids: [8] },
+                           { title: '측두엽', ids: [9] },
+                           { title: '후두엽', ids: [10] }
+                        ]
+                    },
+                    {
+                        title: '간뇌 (Diencephalon)',
+                        ids: [2, 11],
+                        description: '대뇌 반구와 뇌간 사이에 위치하며, 시상, 시상하부 등으로 구성됩니다. 후각을 제외한 모든 감각 정보의 중계소 역할을 하며, 자율신경계 조절, 호르몬 분비, 운동 제어 등 생명 유지에 필수적인 기능들의 핵심 허브입니다.',
+                        children: [
+                           { title: '시상', ids: [2] },
+                           { title: '시상하부', ids: [11] }
+                        ]
+                    },
+                    { title: '소뇌 (Cerebellum)', ids: [6] },
+                    { title: '뇌간 (Brainstem)', ids: [1] }
+                ]
+            },
+            functional: { title: '기능적 분류', type: 'placeholder' }
+        };
 
-        composer = new EffectComposer(renderer);
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
+        const infoBox = document.getElementById('info-box');
+        const infoTitle = document.getElementById('info-title');
+        const infoDescription = document.getElementById('info-description');
 
-        loadBrainData();
-        
-        window.addEventListener('resize', onWindowResize);
-        document.addEventListener('mousemove', onMouseMove);
-    }
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.FogExp2(0x000000, 0.007);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 200);
+            targetCameraPos.copy(camera.position);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; controls.dampingFactor = 0.05;
+            controls.minDistance = 50; controls.maxDistance = 300; controls.enablePan = false;
+            targetControlsTarget.copy(controls.target);
+            controls.addEventListener('start', () => { isAnimatingCamera = false; });
+            const renderScene = new RenderPass(scene, camera);
+            bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0; bloomPass.strength = 2.2; bloomPass.radius = 0.6;
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene); composer.addPass(bloomPass);
 
-    async function loadBrainData() {
-        try {
-            const response = await fetch('brain.json');
-            const data = await response.json();
-            createDigitalBrain(data);
-            document.getElementById('loader').style.display = 'none';
-        } catch (error) {
-            console.error("뇌 데이터를 로드할 수 없습니다:", error);
-            document.getElementById('loader').innerText = "오류: brain.json 파일을 찾을 수 없습니다. Python 스크립트를 먼저 실행했는지 확인해주세요.";
+            document.getElementById('close-button').addEventListener('click', () => {
+                const disclaimerScreen = document.getElementById('disclaimer-screen');
+                disclaimerScreen.style.opacity = '0';
+                setTimeout(() => { disclaimerScreen.style.display = 'none'; }, 500);
+            });
+
+            loadBrainData();
+            window.addEventListener('resize', onWindowResize);
         }
-    }
 
-    function createDigitalBrain(data) {
-        brainGroup = new THREE.Group();
-        scene.add(brainGroup);
-        
-        const vertices = new Float32Array(data.vertices.flat());
-        const numVertices = vertices.length / 3;
-
-        const particleGeometry = new THREE.BufferGeometry();
-        particleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        
-        const colors = new Float32Array(numVertices * 3);
-        const color = new THREE.Color();
-        color.setHSL(0.6, 0.9, 0.6);
-
-        for (let i = 0; i < numVertices; i++) {
-            colors.set([color.r, color.g, color.b], i * 3);
-        }
-        
-        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        particleGeometry.setAttribute('originalColor', new THREE.BufferAttribute(colors.slice(), 3));
-
-        const particleMaterial = new THREE.PointsMaterial({
-            size: 0.8,
-            sizeAttenuation: true,
-            map: createCircleTexture(),
-            vertexColors: true,
-            transparent: true,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-
-        brainParticles = new THREE.Points(particleGeometry, particleMaterial);
-        brainGroup.add(brainParticles);
-
-        const lineGeometry = new THREE.BufferGeometry();
-        lineGeometry.setAttribute('position', particleGeometry.getAttribute('position')); 
-        lineGeometry.setIndex(data.faces.flat());
-
-        const lineMaterial = new THREE.LineBasicMaterial({
-            color: 0x99bbff, 
-            transparent: true,
-            opacity: 0.25,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-
-        const wireframe = new THREE.WireframeGeometry(lineGeometry);
-        const brainLines = new THREE.LineSegments(wireframe, lineMaterial);
-        brainGroup.add(brainLines);
-
-        brainGroup.rotation.x = -Math.PI / 2;
-        brainGroup.rotation.z = Math.PI / 2;
-    }
-    
-    function createCircleTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128;
-        canvas.height = 128;
-        const context = canvas.getContext('2d');
-        const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-        gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(0.2, 'rgba(200,200,255,0.8)');
-        gradient.addColorStop(0.8, 'rgba(150,150,255,0.1)');
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, 128, 128);
-        return new THREE.CanvasTexture(canvas);
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-
-        if (brainGroup) {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(brainParticles);
-            
-            const particleColors = brainParticles.geometry.attributes.color;
-            const originalColors = brainParticles.geometry.attributes.originalColor;
-            
-            particleColors.copy(originalColors);
-
-            if (intersects.length > 0) {
-                const intersectIndex = intersects[0].index;
-                const intersectionPoints = brainParticles.geometry.attributes.position;
-                const p = new THREE.Vector3().fromBufferAttribute(intersectionPoints, intersectIndex);
-                
-                const interactionRadius = 25.0;
-                const highlightColor = new THREE.Color(0xffffff); 
-
-                for (let i = 0; i < particleColors.count; i++) {
-                    const tempP = new THREE.Vector3().fromBufferAttribute(intersectionPoints, i);
-                    const distance = p.distanceTo(tempP);
-
-                    if (distance < interactionRadius) {
-                        const intensity = Math.pow(1 - distance / interactionRadius, 2.0);
-                        const originalColor = new THREE.Color().fromBufferAttribute(originalColors, i);
-                        
-                        originalColor.lerp(highlightColor, intensity);
-                        particleColors.setXYZ(i, originalColor.r, originalColor.g, originalColor.b);
-                    }
+        async function loadBrainData() {
+            try {
+                const response = await fetch('test.json');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                createDigitalBrain(data);
+                createUI();
+                document.getElementById('close-button')?.classList.add('enabled');
+            } catch (error) {
+                console.error("뇌 데이터를 로드할 수 없습니다:", error);
+                const disclaimerBox = document.querySelector('.disclaimer-box');
+                if (disclaimerBox) {
+                    const errorP = document.createElement('p');
+                    errorP.style.color = '#ff6666'; errorP.style.marginTop = '20px'; errorP.style.fontWeight = 'bold';
+                    errorP.innerText = "오류: 뇌 데이터를 로드할 수 없습니다.";
+                    disclaimerBox.appendChild(errorP);
                 }
             }
-            particleColors.needsUpdate = true;
         }
 
-        controls.update();
-        composer.render();
-    }
+        function createUI() {
+            const container = document.getElementById('controls-container');
+            container.innerHTML = '';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'controls-content-wrapper';
+            container.appendChild(wrapper);
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        composer.setSize(window.innerWidth, window.innerHeight); 
-    }
+            setupDragScroll(container);
 
-    function onMouseMove(event) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    }
+            navigationStack = [];
+            updateControlsUI();
+        }
 
-    init();
-    animate();
-</script>
+        function updateControlsUI() {
+            const wrapper = document.querySelector('#controls-container .controls-content-wrapper');
+            wrapper.innerHTML = '';
+
+            setTimeout(() => { document.getElementById('controls-container').scrollLeft = 0; }, 50);
+
+            const backButton = document.createElement('button');
+            backButton.classList.add('control-button');
+
+            if (navigationStack.length > 0) {
+                const currentTitle = navigationStack[navigationStack.length - 1].title;
+                backButton.innerText = `‹ ${currentTitle}`;
+                backButton.title = "상위 단계로 이동";
+                backButton.onclick = () => {
+                    navigationStack.pop();
+                    infoBox.classList.remove('visible');
+                    const previousNode = navigationStack.length > 0 ? navigationStack[navigationStack.length - 1] : null;
+                    onStructureSelect(previousNode ? (previousNode.ids || null) : null, false);
+                    updateControlsUI();
+                };
+            } else {
+                backButton.innerText = '전체 보기';
+                backButton.id = 'show-all-btn';
+                backButton.classList.toggle('active', activeSelection === null);
+                backButton.onclick = () => onStructureSelect(null, true);
+            }
+            wrapper.appendChild(backButton);
+            wrapper.appendChild(createDivider(true));
+
+            let currentItems;
+            const currentNode = navigationStack.length > 0 ? navigationStack[navigationStack.length - 1] : null;
+
+            if (!currentNode) {
+                currentItems = Object.entries(CLASSIFICATION_SYSTEMS).map(([key, value]) => ({ ...value, key }));
+            } else {
+                currentItems = currentNode.children || [];
+            }
+
+            const buttonGroup = document.createElement('div');
+            buttonGroup.classList.add('button-group');
+
+            currentItems.forEach(item => {
+                const button = document.createElement('button');
+                button.innerText = item.title;
+                button.classList.add('control-button');
+
+                if (item.ids && item.ids.length === 1) {
+                    button.dataset.selectsId = item.ids[0];
+                    const isDirectlySelected = typeof activeSelection === 'string' && activeSelection === String(item.ids[0]);
+                    button.classList.toggle('active', isDirectlySelected);
+                }
+
+                if (item.type === 'placeholder') {
+                    button.classList.add('placeholder');
+                } else {
+                    button.onclick = (e) => {
+                        if (item.type === 'info_content') {
+                            onStructureSelect(null, false);
+                            infoTitle.innerText = item.info.title;
+                            infoDescription.innerHTML = item.info.content;
+                            infoBox.classList.add('visible');
+                            wrapper.querySelectorAll('.control-button').forEach(btn => btn.classList.remove('active'));
+                            e.target.classList.add('active');
+                            return;
+                        }
+
+                        if (item.ids && !item.children && item.ids.length === 1) {
+                            onStructureSelect(String(item.ids[0]), false);
+                            return;
+                        }
+
+                        if (item.children) {
+                            const idsToSelect = item.ids ? item.ids.map(String) : null;
+                            onStructureSelect(idsToSelect, false);
+
+                            if (item.description) {
+                                infoTitle.innerText = item.title;
+                                infoDescription.innerText = item.description;
+                                infoBox.classList.add('visible');
+                            } else {
+                                infoBox.classList.remove('visible');
+                            }
+
+                            const nodeToPush = item.key ? CLASSIFICATION_SYSTEMS[item.key] : item;
+                            navigationStack.push(nodeToPush);
+                            updateControlsUI();
+                        }
+                    };
+                }
+                buttonGroup.appendChild(button);
+            });
+            wrapper.appendChild(buttonGroup);
+        }
+
+        function onStructureSelect(selection, resetUI = true) {
+            const previousSelection = activeSelection;
+            activeSelection = selection;
+
+            if (resetUI) {
+                navigationStack = [];
+                infoBox.classList.remove('visible');
+                updateControlsUI();
+            } else if (previousSelection !== activeSelection) {
+                updateControlsUI();
+            }
+
+            if (selection && !Array.isArray(selection)) {
+                bloomPass.strength = 3.5;
+                const info = partInfo[selection];
+                if (info) {
+                    const worldCenter = info.center.clone().applyMatrix4(brainGroup.matrixWorld);
+                    targetControlsTarget.copy(worldCenter);
+                    const distanceMultiplier = (parseInt(selection, 10) >= 7) ? 2.8 : 2.5;
+                    const distance = info.radius * distanceMultiplier;
+                    const newCameraPos = new THREE.Vector3(0, 0, 1).applyQuaternion(camera.quaternion).multiplyScalar(distance).add(worldCenter);
+                    targetCameraPos.copy(newCameraPos);
+
+                    const structureInfo = structureMap[selection];
+                    if (structureInfo) {
+                        infoTitle.innerText = structureInfo.name;
+                        infoDescription.innerText = structureInfo.description;
+                        infoBox.classList.add('visible');
+                    } else {
+                        infoBox.classList.remove('visible');
+                    }
+                }
+                isAnimatingCamera = true;
+            } else {
+                bloomPass.strength = 2.2;
+                targetCameraPos.set(0, 0, 200);
+                targetControlsTarget.set(0, 0, 0);
+                isAnimatingCamera = true;
+            }
+        }
+
+        function createDivider(visible = false) {
+            const divider = document.createElement('div');
+            divider.classList.add('divider');
+            if (visible) {
+                divider.style.display = 'flex';
+            }
+            return divider;
+        }
+
+        function setupDragScroll(element) {
+            let isDown = false, startX, scrollLeft;
+            element.addEventListener('mousedown', (e) => { isDown = true; element.classList.add('active-drag'); startX = e.pageX - element.offsetLeft; scrollLeft = element.scrollLeft; });
+            element.addEventListener('mouseleave', () => { isDown = false; element.classList.remove('active-drag'); });
+            element.addEventListener('mouseup', () => { isDown = false; element.classList.remove('active-drag'); });
+            element.addEventListener('mousemove', (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - element.offsetLeft; const walk = (x - startX) * 2; element.scrollLeft = scrollLeft - walk; });
+        }
+
+        function createDigitalBrain(data) {
+            const tempGeo = new THREE.BufferGeometry();
+            tempGeo.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
+            tempGeo.computeBoundingBox();
+            const center = new THREE.Vector3();
+            tempGeo.boundingBox.getCenter(center);
+            for (let i = 0; i < data.vertices.length; i++) {
+                const vec = new THREE.Vector3().fromArray(data.vertices[i]); vec.sub(center); data.vertices[i] = vec.toArray();
+            }
+            const CEREBELLUM_ID = 6; const CEREBELLUM_SCALE = 0.85;
+            const cerebellumCenter = new THREE.Vector3(); let cerebellumVertexCount = 0; const cerebellumIndices = [];
+            for (let i = 0; i < data.types.length; i++) {
+                if (data.types[i] === CEREBELLUM_ID) {
+                    const vertex = data.vertices[i]; cerebellumCenter.add(new THREE.Vector3(vertex[0], vertex[1], vertex[2]));
+                    cerebellumVertexCount++; cerebellumIndices.push(i);
+                }
+            }
+            if (cerebellumVertexCount > 0) {
+                cerebellumCenter.divideScalar(cerebellumVertexCount);
+                for (const i of cerebellumIndices) {
+                    const vertexVec = new THREE.Vector3().fromArray(data.vertices[i]);
+                    const newPosition = vertexVec.sub(cerebellumCenter).multiplyScalar(CEREBELLUM_SCALE).add(cerebellumCenter);
+                    data.vertices[i] = newPosition.toArray();
+                }
+            }
+            brainGroup = new THREE.Group(); scene.add(brainGroup);
+            const vertices = new Float32Array(data.vertices.flat());
+            const types = new Float32Array(data.types); const numVertices = vertices.length / 3;
+            const particleGeometry = new THREE.BufferGeometry();
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            particleGeometry.setAttribute('typeId', new THREE.BufferAttribute(types, 1));
+            const colors = new Float32Array(numVertices * 3);
+            const baseColor = new THREE.Color().setHSL(0.6, 0.9, 0.6);
+            for (let i = 0; i < numVertices; i++) { colors.set([baseColor.r, baseColor.g, baseColor.b], i * 3); }
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors.slice(), 3));
+            particleGeometry.setAttribute('originalColor', new THREE.BufferAttribute(colors.slice(), 3));
+            const particleMaterial = new THREE.PointsMaterial({ size: 0.8, sizeAttenuation: true, map: createCircleTexture(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            brainParticles = new THREE.Points(particleGeometry, particleMaterial); brainGroup.add(brainParticles);
+            const lineGeometry = new THREE.BufferGeometry();
+            lineGeometry.setAttribute('position', particleGeometry.getAttribute('position'));
+            lineGeometry.setIndex(data.faces.flat());
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x99bbff, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+            const wireframe = new THREE.WireframeGeometry(lineGeometry);
+            brainLines = new THREE.LineSegments(wireframe, lineMaterial); brainGroup.add(brainLines);
+            brainGroup.rotation.x = -Math.PI / 2; brainGroup.rotation.z = Math.PI / 2;
+            precomputePartBounds(data);
+        }
+
+        function precomputePartBounds(data) {
+            const tempVertices = {};
+            for (let i = 0; i < data.vertices.length; i++) { const typeId = data.types[i]; if (!tempVertices[typeId]) tempVertices[typeId] = []; tempVertices[typeId].push(...data.vertices[i]); }
+            for (const typeId in tempVertices) { if (structureMap[typeId]) { const partGeo = new THREE.BufferGeometry(); partGeo.setAttribute('position', new THREE.Float32BufferAttribute(tempVertices[typeId], 3)); partGeo.computeBoundingSphere(); partInfo[typeId] = { center: partGeo.boundingSphere.center, radius: partGeo.boundingSphere.radius }; } }
+        }
+
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(200,200,255,0.8)');
+            gradient.addColorStop(0.8, 'rgba(150,150,255,0.1)'); gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = gradient; context.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (isAnimatingCamera) {
+                camera.position.lerp(targetCameraPos, 0.05); controls.target.lerp(targetControlsTarget, 0.05);
+                if (camera.position.distanceTo(targetCameraPos) < 0.1 && controls.target.distanceTo(targetControlsTarget) < 0.1) { isAnimatingCamera = false; }
+            }
+            if (brainParticles) {
+                const particleColors = brainParticles.geometry.attributes.color; const originalColors = brainParticles.geometry.attributes.originalColor;
+                const typeIds = brainParticles.geometry.attributes.typeId; const whiteColor = new THREE.Color(0xffffff);
+                for (let i = 0; i < particleColors.count; i++) {
+                    const typeId = String(typeIds.getX(i));
+                    const finalColor = new THREE.Color().fromBufferAttribute(originalColors, i);
+
+                    let isSelected = false;
+                    if (activeSelection !== null) {
+                        if (Array.isArray(activeSelection)) {
+                            isSelected = activeSelection.includes(typeId);
+                        } else {
+                            isSelected = (activeSelection === typeId);
+                        }
+                    }
+
+                    if (activeSelection !== null) {
+                        if (isSelected) {
+                            finalColor.lerp(whiteColor, 0.6);
+                        } else {
+                            finalColor.multiplyScalar(0.05);
+                        }
+                    }
+                    particleColors.setXYZ(i, finalColor.r, finalColor.g, finalColor.b);
+                }
+                particleColors.needsUpdate = true; brainLines.material.opacity = (activeSelection === null) ? 0.15 : 0.01;
+            }
+            controls.update(); composer.render();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+        animate();
+    </script>
 </body>
+
 </html>
