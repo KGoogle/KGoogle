@@ -190,8 +190,10 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            /* 40px = 상단 여백 20px + 하단 여백 20px */
-            max-height: calc(100vh - var(--controls-height, 85px) - 40px);
+            
+            /* ✨ 최종 수정된 부분: top과 bottom으로 높이를 지정 */
+            bottom: calc(var(--controls-height, 70px) + 20px);
+            max-height: none; 
         }
 
         #info-box.visible {
@@ -405,7 +407,7 @@
             const controlsContainer = document.getElementById('controls-container');
             if (controlsContainer) {
                 const controlsHeight = controlsContainer.offsetHeight;
-                document.documentElement.style.setProperty('--controls-height', `${controlsHeight + 15}px`);
+                document.documentElement.style.setProperty('--controls-height', `${controlsHeight}px`);
             }
         }
 
