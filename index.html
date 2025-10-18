@@ -188,12 +188,13 @@
             transform: translateY(-10px);
             transition: opacity 0.4s ease, transform 0.4s ease, left 0.4s ease;
             pointer-events: none;
+            /* --- 수정된 부분 시작 --- */
             display: flex;
             flex-direction: column;
-            
-            /* ✨ 최종 수정된 부분: max-height를 다시 사용 */
-            /* 40px = 상단 여백(20px) + 하단 컨트롤바와의 여백(20px) */
-            max-height: calc(100vh - var(--controls-height, 70px) - 40px);
+            /* JS에서 계산된 컨트롤 바 높이와 상하단 여백을 제외한 최대 높이 설정 */
+            /* 40px = 상단 여백 20px + 하단 여백 20px */
+            max-height: calc(100vh - var(--controls-height, 85px) - 40px);
+            /* --- 수정된 부분 끝 --- */
         }
 
         #info-box.visible {
@@ -206,7 +207,9 @@
             margin: 0 0 10px 0;
             font-size: 1.2em;
             color: #00aaff;
-            flex-shrink: 0;
+            /* --- 수정된 부분 시작 --- */
+            flex-shrink: 0; /* 제목이 줄어들지 않도록 설정 */
+            /* --- 수정된 부분 끝 --- */
         }
         
         #info-description {
@@ -216,10 +219,13 @@
             color: #ddd;
             white-space: pre-wrap;
             font-family: monospace, sans-serif;
-            overflow-y: auto;
-            padding-right: 10px;
+            /* --- 수정된 부분 시작 --- */
+            overflow-y: auto; /* 내용이 넘칠 경우 스크롤 생성 */
+            padding-right: 10px; /* 스크롤바와 내용 사이 여백 */
+            /* --- 수정된 부분 끝 --- */
         }
         
+        /* --- 추가된 부분 시작 (스크롤바 스타일) --- */
         #info-description::-webkit-scrollbar {
             width: 8px;
         }
@@ -237,6 +243,7 @@
         #info-description::-webkit-scrollbar-thumb:hover {
             background: rgba(85, 204, 255, 0.8);
         }
+        /* --- 추가된 부분 끝 --- */
 
         #info-box strong {
             color: #55ccff;
@@ -322,7 +329,7 @@
                 type: 'info_content',
                 info: {
                     title: '신경계',
-    content: `뇌를 포함한 신경계는 기능과 구조가 다른 두 가지 주요 세포 유형으로 구성됩니다.
+                    content: `뇌를 포함한 신경계는 기능과 구조가 다른 두 가지 주요 세포 유형으로 구성됩니다.
 
 <span class="neuron-term">신경 조직</span>
 ├─ <span class="neuron-term">신경세포 (Neuron)</span> - 정보 처리 및 전달
@@ -407,7 +414,7 @@
             const controlsContainer = document.getElementById('controls-container');
             if (controlsContainer) {
                 const controlsHeight = controlsContainer.offsetHeight;
-                document.documentElement.style.setProperty('--controls-height', `${controlsHeight}px`);
+                document.documentElement.style.setProperty('--controls-height', `${controlsHeight + 15}px`);
             }
         }
 
