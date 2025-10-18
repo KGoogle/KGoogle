@@ -92,6 +92,8 @@
             left: 0;
             width: 100%;
             padding: 15px 0;
+
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
             box-sizing: border-box;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
@@ -190,7 +192,8 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - var(--controls-height, 85px) - 40px);
+            
+            max-height: calc(100vh - var(--controls-height, 75px) - 40px);
         }
 
         #info-box.visible {
@@ -319,7 +322,7 @@
                 type: 'info_content',
                 info: {
                     title: '신경계',
-                    content: `뇌를 포함한 신경계는 기능과 구조가 다른 두 가지 주요 세포 유형으로 구성됩니다.
+    content: `뇌를 포함한 신경계는 기능과 구조가 다른 두 가지 주요 세포 유형으로 구성됩니다.
 
 <span class="neuron-term">신경 조직</span>
 ├─ <span class="neuron-term">신경세포 (Neuron)</span> - 정보 처리 및 전달
@@ -400,11 +403,12 @@
         const infoTitle = document.getElementById('info-title');
         const infoDescription = document.getElementById('info-description');
 
+
         function updateLayoutVariables() {
             const controlsContainer = document.getElementById('controls-container');
             if (controlsContainer) {
                 const controlsHeight = controlsContainer.offsetHeight;
-                document.documentElement.style.setProperty('--controls-height', `${controlsHeight + 15}px`);
+                document.documentElement.style.setProperty('--controls-height', `${controlsHeight}px`);
             }
         }
 
@@ -438,6 +442,8 @@
 
             loadBrainData();
             window.addEventListener('resize', onWindowResize);
+
+            updateLayoutVariables();
         }
 
         async function loadBrainData() {
@@ -447,7 +453,6 @@
                 const data = await response.json();
                 createDigitalBrain(data);
                 createUI();
-                setTimeout(updateLayoutVariables, 100); 
                 document.getElementById('close-button')?.classList.add('enabled');
             } catch (error) {
                 console.error("뇌 데이터를 로드할 수 없습니다:", error);
@@ -734,6 +739,7 @@
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+            
             updateLayoutVariables();
         }
 
