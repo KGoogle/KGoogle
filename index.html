@@ -191,9 +191,9 @@
             display: flex;
             flex-direction: column;
             
-            /* ✨ 최종 수정된 부분: top과 bottom으로 높이를 지정 */
-            bottom: calc(var(--controls-height, 70px) + 20px);
-            max-height: none; 
+            /* ✨ 최종 수정된 부분: max-height를 다시 사용 */
+            /* 40px = 상단 여백(20px) + 하단 컨트롤바와의 여백(20px) */
+            max-height: calc(100vh - var(--controls-height, 70px) - 40px);
         }
 
         #info-box.visible {
