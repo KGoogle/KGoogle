@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>뇌 모델</title>
     <style>
         body {
@@ -91,7 +91,10 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            padding: 15px 0;
+            /* -- MODIFIED -- */
+            padding: 15px 0 calc(15px + env(safe-area-inset-bottom));
+            -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+            /* -- END MODIFIED -- */
             box-sizing: border-box;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
@@ -367,7 +370,7 @@
                 }
             },
             anatomical: {
-                title: '해부학적 분류(검토 필요)', type: 'hierarchy',
+                title: '해부학적 분류', type: 'hierarchy',
                 children: [
                     {
                         title: '대뇌 (Cerebrum)',
@@ -616,10 +619,36 @@
 
         function setupDragScroll(element) {
             let isDown = false, startX, scrollLeft;
-            element.addEventListener('mousedown', (e) => { isDown = true; element.classList.add('active-drag'); startX = e.pageX - element.offsetLeft; scrollLeft = element.scrollLeft; });
-            element.addEventListener('mouseleave', () => { isDown = false; element.classList.remove('active-drag'); });
-            element.addEventListener('mouseup', () => { isDown = false; element.classList.remove('active-drag'); });
-            element.addEventListener('mousemove', (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - element.offsetLeft; const walk = (x - startX) * 2; element.scrollLeft = scrollLeft - walk; });
+
+            const startDragging = (e) => {
+                isDown = true;
+                element.classList.add('active-drag');
+                startX = (e.pageX || e.touches[0].pageX) - element.offsetLeft;
+                scrollLeft = element.scrollLeft;
+            };
+
+            const stopDragging = () => {
+                isDown = false;
+                element.classList.remove('active-drag');
+            };
+
+            const whileDragging = (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = (e.pageX || e.touches[0].pageX) - element.offsetLeft;
+                const walk = (x - startX) * 2;
+                element.scrollLeft = scrollLeft - walk;
+            };
+
+            element.addEventListener('mousedown', startDragging);
+            element.addEventListener('mouseleave', stopDragging);
+            element.addEventListener('mouseup', stopDragging);
+            element.addEventListener('mousemove', whileDragging);
+
+            element.addEventListener('touchstart', startDragging, { passive: true });
+            element.addEventListener('touchend', stopDragging);
+            element.addEventListener('touchcancel', stopDragging);
+            element.addEventListener('touchmove', whileDragging, { passive: false });
         }
 
         function createDigitalBrain(data) {
