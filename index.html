@@ -92,7 +92,6 @@
             left: 0;
             width: 100%;
             padding: 15px 0;
-
             padding-bottom: calc(15px + env(safe-area-inset-bottom));
             box-sizing: border-box;
             background-color: rgba(0, 0, 0, 0.5);
@@ -192,8 +191,6 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            
-            max-height: calc(100vh - var(--controls-height, 75px) - 40px);
         }
 
         #info-box.visible {
@@ -402,13 +399,18 @@
         const infoBox = document.getElementById('info-box');
         const infoTitle = document.getElementById('info-title');
         const infoDescription = document.getElementById('info-description');
-
-
-        function updateLayoutVariables() {
+        
+        function updateDynamicLayout() {
             const controlsContainer = document.getElementById('controls-container');
-            if (controlsContainer) {
+            const infoBox = document.getElementById('info-box');
+
+            if (controlsContainer && infoBox) {
+                const availableHeight = window.innerHeight;
                 const controlsHeight = controlsContainer.offsetHeight;
-                document.documentElement.style.setProperty('--controls-height', `${controlsHeight}px`);
+                const infoBoxTop = infoBox.offsetTop;
+                const desiredBottomGap = 20;
+                const newMaxHeight = availableHeight - controlsHeight - infoBoxTop - desiredBottomGap;
+                infoBox.style.maxHeight = `${newMaxHeight}px`;
             }
         }
 
@@ -443,7 +445,7 @@
             loadBrainData();
             window.addEventListener('resize', onWindowResize);
 
-            updateLayoutVariables();
+            setTimeout(updateDynamicLayout, 100);
         }
 
         async function loadBrainData() {
@@ -739,8 +741,7 @@
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
-            
-            updateLayoutVariables();
+            updateDynamicLayout();
         }
 
         init();
