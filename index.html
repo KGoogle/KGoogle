@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>뇌 모델</title>
     <style>
         body {
@@ -91,10 +91,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            /* -- MODIFIED -- */
-            padding: 15px 0 calc(15px + env(safe-area-inset-bottom));
-            -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
-            /* -- END MODIFIED -- */
+            padding: 15px 0;
             box-sizing: border-box;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
@@ -193,7 +190,8 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 120px); 
+            /* 40px = 상단 여백 20px + 하단 여백 20px */
+            max-height: calc(100vh - var(--controls-height, 85px) - 40px);
         }
 
         #info-box.visible {
@@ -403,6 +401,14 @@
         const infoTitle = document.getElementById('info-title');
         const infoDescription = document.getElementById('info-description');
 
+        function updateLayoutVariables() {
+            const controlsContainer = document.getElementById('controls-container');
+            if (controlsContainer) {
+                const controlsHeight = controlsContainer.offsetHeight;
+                document.documentElement.style.setProperty('--controls-height', `${controlsHeight + 15}px`);
+            }
+        }
+
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000000);
@@ -442,6 +448,7 @@
                 const data = await response.json();
                 createDigitalBrain(data);
                 createUI();
+                updateLayoutVariables();
                 document.getElementById('close-button')?.classList.add('enabled');
             } catch (error) {
                 console.error("뇌 데이터를 로드할 수 없습니다:", error);
@@ -619,36 +626,10 @@
 
         function setupDragScroll(element) {
             let isDown = false, startX, scrollLeft;
-
-            const startDragging = (e) => {
-                isDown = true;
-                element.classList.add('active-drag');
-                startX = (e.pageX || e.touches[0].pageX) - element.offsetLeft;
-                scrollLeft = element.scrollLeft;
-            };
-
-            const stopDragging = () => {
-                isDown = false;
-                element.classList.remove('active-drag');
-            };
-
-            const whileDragging = (e) => {
-                if (!isDown) return;
-                e.preventDefault();
-                const x = (e.pageX || e.touches[0].pageX) - element.offsetLeft;
-                const walk = (x - startX) * 2;
-                element.scrollLeft = scrollLeft - walk;
-            };
-
-            element.addEventListener('mousedown', startDragging);
-            element.addEventListener('mouseleave', stopDragging);
-            element.addEventListener('mouseup', stopDragging);
-            element.addEventListener('mousemove', whileDragging);
-
-            element.addEventListener('touchstart', startDragging, { passive: true });
-            element.addEventListener('touchend', stopDragging);
-            element.addEventListener('touchcancel', stopDragging);
-            element.addEventListener('touchmove', whileDragging, { passive: false });
+            element.addEventListener('mousedown', (e) => { isDown = true; element.classList.add('active-drag'); startX = e.pageX - element.offsetLeft; scrollLeft = element.scrollLeft; });
+            element.addEventListener('mouseleave', () => { isDown = false; element.classList.remove('active-drag'); });
+            element.addEventListener('mouseup', () => { isDown = false; element.classList.remove('active-drag'); });
+            element.addEventListener('mousemove', (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - element.offsetLeft; const walk = (x - startX) * 2; element.scrollLeft = scrollLeft - walk; });
         }
 
         function createDigitalBrain(data) {
@@ -754,6 +735,7 @@
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+            updateLayoutVariables();
         }
 
         init();
