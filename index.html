@@ -23,7 +23,6 @@
     <style>
       body {
         margin: 0;
-        overscroll-behavior-y: contain;
       }
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
@@ -96,20 +95,6 @@
         }
       }
 
-      const useScreenHeight = () => {
-        useEffect(() => {
-          const setVh = () => {
-            const vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-          };
-
-          setVh();
-
-          window.addEventListener('resize', setVh);
-
-          return () => window.removeEventListener('resize', setVh);
-        }, []);
-      };
       
       const PhilosophyIcon = ({ className }) => (
         <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -138,11 +123,67 @@
         );
       };
 
-      const ChatInput = ({ input, setInput, handleSend, isLoading }) => { const textareaRef = useRef(null); const [isMultiline, setIsMultiline] = useState(false); const [baseHeight, setBaseHeight] = useState(0); useEffect(() => { const calculateBaseHeight = () => { const textarea = textareaRef.current; if (textarea) { textarea.style.height = 'auto'; setBaseHeight(textarea.scrollHeight); } }; document.fonts.ready.then(calculateBaseHeight); }, []); useLayoutEffect(() => { const textarea = textareaRef.current; if (!textarea || baseHeight === 0) return; textarea.style.height = 'auto'; const scrollHeight = textarea.scrollHeight; setIsMultiline(scrollHeight > baseHeight + 2); textarea.style.height = `${scrollHeight}px`; }, [input, baseHeight]); const handleKeyDown = (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isLoading && input.trim()) { handleSend(); } } }; const isButtonVisible = input.trim().length > 0 || isLoading; return ( <form onSubmit={(e) => { e.preventDefault(); if (!isLoading && input.trim()) { handleSend(); } }} className="flex items-end px-2 py-2 md:px-4 md:py-3 bg-stone-900/80 backdrop-blur-sm border-t border-stone-700" > <div className="relative flex-1 flex"> 
-      <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="질문을 던져보세요..." rows={1} className="w-full bg-stone-700 rounded-[18px] py-[8px] pl-4 pr-[50px] resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none transition-all duration-200 max-h-[150px] text-stone-100 placeholder-stone-400 custom-scrollbar min-h-[40px]" style={{ lineHeight: 1.5 }} disabled={isLoading} spellCheck="false" autoComplete="off" /> <button type="submit" disabled={isLoading || !input.trim()} className={`absolute right-[10px] flex-shrink-0 w-[30px] h-[30px] bg-white rounded-full flex items-center justify-center transition-all duration-200 ease-out shadow-md hover:bg-stone-200 disabled:bg-stone-400 disabled:cursor-not-allowed transform ${isButtonVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-80 pointer-events-none'} ${isMultiline ? 'bottom-[4px] translate-y-0' : 'top-1/2 -translate-y-1/2'}`} > {isLoading ? ( <div className="w-4 h-4 border-2 border-t-transparent border-black rounded-full animate-spin"></div> ) : ( <UpArrowIcon className="w-[18px] h-[18px] stroke-black" /> )} </button> </div> </form> ); };
+      const ChatInput = ({ input, setInput, handleSend, isLoading }) => {
+        const textareaRef = useRef(null);
+        const [isMultiline, setIsMultiline] = useState(false);
+        const [baseHeight, setBaseHeight] = useState(0);
+
+        useEffect(() => {
+            const calculateBaseHeight = () => {
+                const textarea = textareaRef.current;
+                if (textarea) {
+                    textarea.style.height = 'auto';
+                    setBaseHeight(textarea.scrollHeight);
+                }
+            };
+            document.fonts.ready.then(calculateBaseHeight);
+        }, []);
+
+        useLayoutEffect(() => {
+            const textarea = textareaRef.current;
+            if (!textarea || baseHeight === 0) return;
+            textarea.style.height = 'auto';
+            const scrollHeight = textarea.scrollHeight;
+            setIsMultiline(scrollHeight > baseHeight + 2);
+            textarea.style.height = `${scrollHeight}px`;
+        }, [input, baseHeight]);
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                if (!isLoading && input.trim()) {
+                    handleSend();
+                }
+            }
+        };
+        
+        const isButtonVisible = input.trim().length > 0 || isLoading;
+
+        return (
+            <form onSubmit={(e) => { e.preventDefault(); if (!isLoading && input.trim()) { handleSend(); } }} className="flex items-end px-2 py-2 md:px-4 md:py-3 bg-stone-900/80 backdrop-blur-sm border-t border-stone-700">
+                <div className="relative flex-1 flex">
+                    <textarea
+                        ref={textareaRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="질문을 던져보세요..."
+                        rows={1}
+                        className="w-full bg-stone-700 rounded-[18px] py-[8px] pl-4 pr-[50px] resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none max-h-[150px] text-stone-100 placeholder-stone-400 custom-scrollbar min-h-[40px]"
+                        style={{ lineHeight: 1.5 }}
+                        disabled={isLoading}
+                        spellCheck="false"
+                        autoComplete="off"
+                    />
+                    <button type="submit" disabled={isLoading || !input.trim()} className={`absolute right-[10px] flex-shrink-0 w-[30px] h-[30px] bg-white rounded-full flex items-center justify-center transition-all duration-200 ease-out shadow-md hover:bg-stone-200 disabled:bg-stone-400 disabled:cursor-not-allowed transform ${isButtonVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-80 pointer-events-none'} ${isMultiline ? 'bottom-[4px] translate-y-0' : 'top-1/2 -translate-y-1/2'}`} >
+                        {isLoading ? ( <div className="w-4 h-4 border-2 border-t-transparent border-black rounded-full animate-spin"></div> ) : ( <UpArrowIcon className="w-[18px] h-[18px] stroke-black" /> )}
+                    </button>
+                </div>
+            </form>
+        );
+      };
       
       const ApiKeyScreen = ({ setApiKey, error, setError }) => {
-        useScreenHeight();
 
         const [localKey, setLocalKey] = useState('');
         const ENCRYPTED_API_KEY_DATA = "cnWDJPdPbo9eVwj9nweqdl+S2mXIUXKPwhkrJsbuZMXiCYkxTwefVeYCdwDdruhJ0HYZ5X+4H5s+IcAvnzFwnbl9GA==";
@@ -163,7 +204,7 @@
         return (
             <div 
               className="flex items-center justify-center bg-stone-900 p-4"
-              style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+              style={{ height: '100dvh' }}
             >
               <div className="w-full max-w-md p-8 text-center bg-stone-800 rounded-2xl shadow-2xl shadow-black/50">
                 <PhilosophyIcon className="w-16 h-16 mx-auto mb-4 text-stone-400" />
@@ -225,7 +266,6 @@
       };
 
       const App = () => {
-        useScreenHeight();
         
         const [apiKey, setApiKey] = useState(null);
         const [chat, setChat] = useState(null);
@@ -302,7 +342,7 @@
         return (
           <div 
             className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50"
-            style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+            style={{ height: '100dvh' }}
           >
             <header className="flex items-center justify-between gap-4 p-4 border-b border-stone-700 bg-stone-900/80 backdrop-blur-sm sticky top-0 z-10">
               <div className="flex items-center gap-4"> 
@@ -329,7 +369,14 @@
                 {error && ( <div className="text-red-400 bg-red-900/50 p-3 rounded-lg text-center font-semibold"> {error} </div> )}
               </div>
             </main>
-            <footer className="w-full max-w-3xl mx-auto"> <ChatInput input={userInput} setInput={setUserInput} handleSend={handleSendMessage} isLoading={isLoading} /> </footer>
+            <footer className="w-full max-w-3xl mx-auto">
+                <ChatInput
+                    input={userInput}
+                    setInput={setUserInput}
+                    handleSend={handleSendMessage}
+                    isLoading={isLoading}
+                />
+            </footer>
           </div>
         );
       };
