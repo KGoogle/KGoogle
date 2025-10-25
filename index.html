@@ -358,7 +358,7 @@
 
         return (
           <div 
-            className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50"
+            className="relative flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50"
             style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
           >
             <header className="flex items-center justify-between gap-4 p-4 border-b border-stone-700 bg-stone-900/80 backdrop-blur-sm sticky top-0 z-10">
@@ -368,7 +368,8 @@
               </div>
               <PersonaSelector selectedPersona={persona} onPersonaChange={handlePersonaChange} />
             </header>
-            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+            
+            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-24">
               <div className="flex flex-col space-y-4">
                 {messages.map((msg, index) => ( <ChatMessageComponent key={index} message={msg} /> ))}
                 {isLoading && ( 
@@ -386,7 +387,10 @@
                 {error && ( <div className="text-red-400 bg-red-900/50 p-3 rounded-lg text-center font-semibold"> {error} </div> )}
               </div>
             </main>
-            <footer className="w-full max-w-3xl mx-auto"> <ChatInput input={userInput} setInput={setUserInput} handleSend={handleSendMessage} isLoading={isLoading} /> </footer>
+            
+            <footer className="absolute bottom-0 w-full">
+              <ChatInput input={userInput} setInput={setUserInput} handleSend={handleSendMessage} isLoading={isLoading} />
+            </footer>
           </div>
         );
       };
