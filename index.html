@@ -137,6 +137,7 @@
 
       const ChatInput = ({ input, setInput, handleSend, isLoading }) => {
         const textareaRef = useRef(null);
+        const [isComposing, setIsComposing] = useState(false);
 
         useLayoutEffect(() => {
           const textarea = textareaRef.current;
@@ -146,12 +147,27 @@
         }, [input]);
 
         const handleKeyDown = (event) => {
-          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+          if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
             event.preventDefault();
             if (!isLoading && input.trim()) {
               handleSend();
             }
           }
+        };
+
+        const handleChange = (e) => {
+          if (!isComposing) {
+            setInput(e.target.value);
+          }
+        };
+        
+        const handleCompositionStart = () => {
+          setIsComposing(true);
+        };
+        
+        const handleCompositionEnd = (e) => {
+          setIsComposing(false);
+          setInput(e.target.value);
         };
 
         const isButtonVisible = input.trim().length > 0 || isLoading;
@@ -170,7 +186,9 @@
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleChange}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
                 onKeyDown={handleKeyDown}
                 placeholder="질문을 던져보세요..."
                 rows={1}
