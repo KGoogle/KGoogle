@@ -107,7 +107,7 @@
           return null;
         }
       }
-      
+
       const useScreenHeight = () => {
         useEffect(() => {
           const setVh = () => {
@@ -389,7 +389,7 @@
 
         return (
           <div 
-            className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50 relative"
+            className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50"
             style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
           >
             <header className="flex items-center justify-between gap-4 p-4 border-b border-stone-700 bg-stone-900/80 backdrop-blur-sm sticky top-0 z-10">
@@ -400,7 +400,7 @@
               <PersonaSelector selectedPersona={persona} onPersonaChange={handlePersonaChange} />
             </header>
 
-            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-24">
+            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
               <div className="flex flex-col space-y-4">
                 {messages.map((msg, index) => (
                   <ChatMessageComponent key={index} message={msg} />
@@ -425,7 +425,7 @@
               </div>
             </main>
 
-            <footer className="absolute bottom-0 left-0 right-0">
+            <footer className="w-full max-w-3xl mx-auto">
               <ChatInput
                 input={userInput}
                 setInput={setUserInput}
