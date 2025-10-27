@@ -71,10 +71,6 @@
 
       const ENCRYPTED_API_KEY_DATA = "cnWDJPdPbo9eVwj9nweqdl+S2mXIUXKPwhkrJsbuZMXiCYkxTwefVeYCdwDdruhJ0HYZ5X+4H5s+IcAvnzFwnbl9GA==";
 
-      const INITIAL_PERSONAS = [
-        { id: 'general', name: '철학자', intro: '지혜를 사랑하는 자여, 환영하오. 당신의 마음속에 떠오른 질문은 무엇이오? 자, 그 생각을 함께 탐구해 봅시다.', prompt: '당신은 깊고 사려 깊은 대화를 나누는 심오한 철학자입니다. 명확성과 지적 엄격함으로 개념을 탐구하십시오. 간단한 답변을 피하고, 대신 탐구적인 질문을 던져 사용자가 자신의 질문에 대해 더 깊이 성찰하도록 격려하십시오. 당신의 목표는 단순히 정보를 제공하는 것이 아니라, 진정한 철학적 탐구를 자극하는 것입니다.' },
-      ];
-
       async function getKeyMaterial(seed) {
         const encoder = new TextEncoder();
         const data = encoder.encode(seed);
@@ -83,13 +79,7 @@
 
       async function getCryptoKey(seed) {
         const keyMaterial = await getKeyMaterial(seed);
-        return await window.crypto.subtle.importKey(
-          'raw',
-          keyMaterial,
-          { name: 'AES-GCM' },
-          false,
-          ['encrypt', 'decrypt']
-        );
+        return await window.crypto.subtle.importKey('raw', keyMaterial, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
       }
 
       async function decryptApiKey(userSeed, encryptedDataString) {
@@ -98,13 +88,7 @@
           const encryptedDataWithIv = Uint8Array.from(atob(encryptedDataString), c => c.charCodeAt(0));
           const iv = encryptedDataWithIv.slice(0, 12);
           const encryptedData = encryptedDataWithIv.slice(12);
-
-          const decrypted = await window.crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv: iv },
-            cryptoKey,
-            encryptedData
-          );
-
+          const decrypted = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, cryptoKey, encryptedData);
           const decoder = new TextDecoder();
           return decoder.decode(decrypted);
         } catch (error) {
@@ -112,513 +96,310 @@
           return null;
         }
       }
+      
+      const INITIAL_PERSONAS = [
+        { id: 'general', name: '철학자', intro: '지혜를 사랑하는 자여, 환영하오. 당신의 마음속에 떠오른 질문은 무엇이오? 자, 그 생각을 함께 탐구해 봅시다.', prompt: '당신은 깊고 사려 깊은 대화를 나누는 심오한 철학자입니다. 명확성과 지적 엄격함으로 개념을 탐구하십시오. 간단한 답변을 피하고, 대신 탐구적인 질문을 던져 사용자가 자신의 질문에 대해 더 깊이 성찰하도록 격려하십시오. 당신의 목표는 단순히 정보를 제공하는 것이 아니라, 진정한 철학적 탐구를 자극하는 것입니다.' },
+      ];
+      
+      const PERSONAS_STORAGE_KEY = 'philosophy-ai-personas';
+      const CHAT_HISTORY_KEY_PREFIX = 'philosophy-ai-chat-history-';
 
       const useScreenHeight = () => {
         useEffect(() => {
-          const setVh = () => {
-            const vh = window.innerHeight * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-          };
+          const setVh = () => { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); };
           setVh();
           window.addEventListener('resize', setVh);
           return () => window.removeEventListener('resize', setVh);
         }, []);
       };
+
+      const PhilosophyIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h3v7H4v-7zm6.5 0h3v7h-3v-7zM2 19h20v3H2v-3zm15-9h3v7h-3v-7zM12 1L2 6v2h20V6L12 1z"></path></svg>);
+      const CloseIcon = ({className}) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>);
+      const UpArrowIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>);
+      const PlusIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>);
+      const TrashIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>);
       
-      const useTypewriter = (text, shouldType, { speed = 10, chunkSize = 5 } = {}) => {
-        const [displayedText, setDisplayedText] = useState('');
-
-        useEffect(() => {
-          if (!shouldType || !text) {
-            setDisplayedText(text || '');
-            return;
-          }
-
-          setDisplayedText('');
-          let i = 0;
-          const intervalId = setInterval(() => {
-            if (i < text.length) {
-              const nextEnd = Math.min(i + chunkSize, text.length);
-              setDisplayedText(text.substring(0, nextEnd));
-              i += chunkSize;
-            } else {
-              clearInterval(intervalId);
-            }
-          }, speed);
-
-          return () => clearInterval(intervalId);
-        }, [text, shouldType, speed, chunkSize]);
-
-        return displayedText;
-      };
-
-
-      const PhilosophyIcon = ({ className }) => (
-        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M4 10h3v7H4v-7zm6.5 0h3v7h-3v-7zM2 19h20v3H2v-3zm15-9h3v7h-3v-7zM12 1L2 6v2h20V6L12 1z"></path>
-        </svg>
-      );
-
-      const UserIcon = ({ className }) => ( 
-        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </svg>
-      );
-      
-      const CloseIcon = ({className}) => (
-        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
-      );
-
-      const UpArrowIcon = ({ className }) => ( 
-        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="19" x2="12" y2="5"></line>
-          <polyline points="5 12 12 5 19 12"></polyline>
-        </svg>
-      );
-      
-      const ChatMessageComponent = ({ message, isLastMessage, chatContainerRef, index }) => {
+      const ChatMessageComponent = ({ message, index, onDelete }) => {
         const isUser = message.role === 'user';
-        const isModel = message.role === 'model';
+        const isDeletable = index > 0;
+        const deleteButtonPosition = isUser ? 'right-0' : 'left-0';
+        const DeleteButton = () => (
+          <button onClick={() => onDelete(index)} className={`absolute top-full mt-1 p-1.5 rounded-full bg-stone-900/50 text-stone-400 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-800/60 hover:text-stone-100 ${deleteButtonPosition}`} aria-label="메시지 삭제">
+            <TrashIcon className="w-4 h-4" />
+          </button>
+        );
 
-        const wrapperClasses = `flex items-start gap-3 md:gap-4 my-4 ${isUser ? 'justify-end' : 'justify-start'}`;
-        const messageClasses = `max-w-xl px-4 py-3 rounded-2xl shadow-md ${isUser ? 'bg-stone-600 text-stone-100 rounded-br-none' : 'bg-stone-700 text-stone-200 rounded-bl-none'}`;
-        const iconClasses = `h-8 w-8 flex-shrink-0 rounded-full p-1.5 ${isUser ? 'bg-stone-600 text-stone-200' : 'bg-stone-700 text-stone-400'}`;
-        const Icon = isUser ? UserIcon : PhilosophyIcon;
-
-        const shouldType = isModel && isLastMessage && index > 0;
-        const displayedContent = useTypewriter(message.content, shouldType, { speed: 10, chunkSize: 5 });
-        
-        useLayoutEffect(() => {
-          if (shouldType && chatContainerRef?.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, [displayedContent, shouldType, chatContainerRef]);
+        const wrapperClasses = `flex w-full ${isUser ? 'justify-end' : 'justify-start'}`;
+        const messageBubbleClasses = isUser
+          ? 'group relative bg-stone-600 text-stone-100 rounded-br-none max-w-[75%] md:max-w-lg px-4 py-3 rounded-2xl shadow-md'
+          : 'group relative max-w-xl text-stone-200';
 
         return (
           <div className={wrapperClasses}>
-            {!isUser && <Icon className={iconClasses} />}
-            <div className={messageClasses}>
-              <p className="whitespace-pre-wrap font-serif text-base leading-relaxed break-words">{displayedContent}</p>
+            <div className={messageBubbleClasses}>
+              <p className="whitespace-pre-wrap font-serif text-base leading-relaxed break-words">{message.content}</p>
+              {isDeletable && <DeleteButton />}
             </div>
-            {isUser && <Icon className={iconClasses} />}
           </div>
         );
       };
 
       const ChatInput = ({ input, setInput, handleSend, isLoading }) => {
         const textareaRef = useRef(null);
-
         useLayoutEffect(() => {
           const textarea = textareaRef.current;
           if (!textarea) return;
           textarea.style.height = 'auto';
           textarea.style.height = `${textarea.scrollHeight}px`;
         }, [input]);
-
         const handleKeyDown = (event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
-            if (!isLoading && input.trim()) {
-              handleSend();
-            }
+            if (!isLoading && input.trim()) handleSend();
           }
         };
-
         const isButtonVisible = input.trim().length > 0 || isLoading;
-
-        return (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!isLoading && input.trim()) handleSend();
-            }}
-            className="px-2 py-2 md:px-4 md:py-3 bg-stone-900/80 backdrop-blur-sm border-t border-stone-700"
-          >
-            <div className="relative flex w-full">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="질문을 던져보세요..."
-                rows={1}
-                className="w-full bg-stone-700 rounded-[18px] py-[8px] pl-4 pr-[50px] resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none transition-all duration-200 max-h-[150px] text-stone-100 placeholder-stone-400 custom-scrollbar min-h-[40px]"
-                style={{ lineHeight: 1.5 }}
-                disabled={isLoading}
-                spellCheck="false"
-                autoComplete="off"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className={`absolute right-[10px] bottom-[5px] flex-shrink-0 w-[30px] h-[30px] bg-white rounded-full flex items-center justify-center transition-all duration-200 ease-out shadow-md hover:bg-stone-200 disabled:bg-stone-400 disabled:cursor-not-allowed transform ${isButtonVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-80 pointer-events-none'}`}
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-t-transparent border-black rounded-full animate-spin"></div>
-                ) : (
-                  <UpArrowIcon className="w-[18px] h-[18px] stroke-black" />
-                )}
-              </button>
-            </div>
-          </form>
-        );
+        return (<form onSubmit={(e) => { e.preventDefault(); if (!isLoading && input.trim()) handleSend(); }} className="px-2 py-2 md:px-4 md:py-3 bg-stone-800 border-t border-stone-700"><div className="relative flex w-full"><textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="질문을 던져보세요..." rows={1} className="w-full bg-stone-700 rounded-[18px] py-[8px] pl-4 pr-[50px] resize-none focus:ring-2 focus:ring-stone-500 focus:outline-none transition-all duration-200 max-h-[150px] text-stone-100 placeholder-stone-400 custom-scrollbar min-h-[40px]" style={{ lineHeight: 1.5 }} disabled={isLoading} spellCheck="false" autoComplete="off" /><button type="submit" disabled={isLoading || !input.trim()} className={`absolute right-[10px] bottom-[5px] flex-shrink-0 w-[30px] h-[30px] bg-white rounded-full flex items-center justify-center transition-all duration-200 ease-out shadow-md hover:bg-stone-200 disabled:bg-stone-400 disabled:cursor-not-allowed transform ${isButtonVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-80 pointer-events-none'}`}>{isLoading ? (<div className="w-4 h-4 border-2 border-t-transparent border-black rounded-full animate-spin"></div>) : (<UpArrowIcon className="w-[18px] h-[18px] stroke-black" />)}</button></div></form>);
       };
 
-      const PersonaSelector = ({ selectedPersona, onPersonaChange, personas }) => {
-        return (
-          <div className="relative">
-            <select
-              value={selectedPersona}
-              onChange={(e) => onPersonaChange(e.target.value)}
-              className="appearance-none w-full md:w-auto bg-stone-700 border border-stone-600 text-stone-200 text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-stone-500 cursor-pointer"
-            >
-              {personas.map(persona => (
-                <option key={persona.id} value={persona.id}>
-                  {persona.name}
-                </option>
-              ))}
-
-              <option value="create-new" className="font-bold text-stone-300 bg-stone-800 border-t border-stone-600">
-                + 만들기
-              </option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-stone-400">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-            </div>
-          </div>
-        );
-      };
-
+      const PersonaSelector = ({ selectedPersona, onPersonaChange, personas }) => (<div className="relative"><select value={selectedPersona} onChange={(e) => onPersonaChange(e.target.value)} className="appearance-none w-full md:w-auto bg-stone-700 border border-stone-600 text-stone-200 text-sm rounded-md py-1.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-stone-500 cursor-pointer">{personas.map(p => (<option key={p.id} value={p.id}>{p.name}</option>))}</select><div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-stone-400"><svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg></div></div>);
       const PersonaCreationModal = ({ isOpen, onClose, onCreate, isCreating, error, setError }) => {
         if (!isOpen) return null;
-
-        const [name, setName] = useState('');
-        const [description, setDescription] = useState('');
-
-
-        const handleSubmit = (e) => {
-          e.preventDefault();
-          if (!name.trim() || isCreating) return;
-          onCreate(name, description);
-        };
-
-        return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-stone-800 rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-md relative animate-fade-in" onClick={e => e.stopPropagation()}>
-              <button onClick={onClose} className="absolute top-3 right-3 text-stone-400 hover:text-stone-100 transition-colors p-1 rounded-full">
-                <CloseIcon className="w-6 h-6" />
-              </button>
-              <h2 className="text-xl font-bold font-serif mb-4 text-stone-100">대상 만들기</h2>
-              <p className="text-stone-300 mb-6 text-sm">대화하고 싶은 대상의 이름과 특징을 입력하세요.</p>
-              <form onSubmit={handleSubmit}>
-                <label htmlFor="persona-name" className="text-sm font-medium text-stone-300">대상 이름</label>
-                <input
-                  id="persona-name"
-                  // ref={nameInputRef} // 자동 포커스 로직 제거에 따라 ref도 필요 없어졌습니다.
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if(error) setError(null);
-                  }}
-                  placeholder="인물,사물,추상 등"
-                  className="w-full mt-1 px-4 py-3 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none"
-                  disabled={isCreating}
-                />
-                <label htmlFor="persona-desc" className="block mt-4 text-sm font-medium text-stone-300">대상 설명 (선택 사항)</label>
-                <textarea
-                  id="persona-desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="대상의 특징, 말투, 배경 등을 자유롭게 설명해주세요. 자세할수록 좋습니다."
-                  rows={3}
-                  className="w-full mt-1 px-4 py-2 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none resize-none custom-scrollbar"
-                  disabled={isCreating}
-                />
-                {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-                <div className="flex gap-4 mt-6">
-                  <button type="button" onClick={onClose} disabled={isCreating} className="w-full px-6 py-2.5 font-semibold text-stone-200 bg-stone-700 rounded-lg transition-colors hover:bg-stone-600 focus:ring-4 focus:ring-stone-600/50 focus:outline-none disabled:opacity-50">
-                    취소
-                  </button>
-                  <button type="submit" disabled={!name.trim() || isCreating} className="w-full px-6 py-2.5 font-semibold text-white bg-stone-600 rounded-lg transition-colors hover:bg-stone-500 focus:ring-4 focus:ring-stone-500/50 focus:outline-none disabled:bg-stone-500 disabled:opacity-50 flex items-center justify-center">
-                    {isCreating ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
-                        <span>생성 중...</span>
-                      </>
-                    ) : '생성하기'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        );
+        const [name, setName] = useState(''); const [description, setDescription] = useState('');
+        const handleSubmit = (e) => { e.preventDefault(); if (name.trim() && !isCreating) onCreate(name, description); };
+        return (<div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-stone-800 rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-md relative animate-fade-in" onClick={e => e.stopPropagation()}><button onClick={onClose} className="absolute top-3 right-3 text-stone-400 hover:text-stone-100 transition-colors p-1 rounded-full"><CloseIcon className="w-6 h-6" /></button><h2 className="text-xl font-bold font-serif mb-4 text-stone-100">대상 만들기</h2><p className="text-stone-300 mb-6 text-sm">대화하고 싶은 대상의 이름과 특징을 입력하세요.</p><form onSubmit={handleSubmit}><label htmlFor="persona-name" className="text-sm font-medium text-stone-300">대상 이름</label><input id="persona-name" type="text" value={name} onChange={(e) => { setName(e.target.value); if(error) setError(null); }} placeholder="인물,사물,추상 등" className="w-full mt-1 px-4 py-3 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none" disabled={isCreating} /><label htmlFor="persona-desc" className="block mt-4 text-sm font-medium text-stone-300">대상 설명 (선택 사항)</label><textarea id="persona-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="대상의 특징, 말투, 배경 등을 자유롭게 설명해주세요. 자세할수록 좋습니다." rows={3} className="w-full mt-1 px-4 py-2 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none resize-none custom-scrollbar" disabled={isCreating} />{error && <p className="mt-2 text-sm text-red-400">{error}</p>}<div className="flex gap-4 mt-6"><button type="button" onClick={onClose} disabled={isCreating} className="w-full px-6 py-2.5 font-semibold text-stone-200 bg-stone-700 rounded-lg transition-colors hover:bg-stone-600 focus:ring-4 focus:ring-stone-600/50 focus:outline-none disabled:opacity-50">취소</button><button type="submit" disabled={!name.trim() || isCreating} className="w-full px-6 py-2.5 font-semibold text-white bg-stone-600 rounded-lg transition-colors hover:bg-stone-500 focus:ring-4 focus:ring-stone-500/50 focus:outline-none disabled:bg-stone-500 disabled:opacity-50 flex items-center justify-center">{isCreating ? (<><div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div><span>생성 중...</span></>) : '생성하기'}</button></div></form></div></div>);
       };
-      
+      const ConfirmDeleteModal = ({ persona, onConfirm, onCancel }) => {
+        if (!persona) return null;
+        
+        const isGeneral = persona.id === 'general';
+        const title = isGeneral ? "대화 초기화" : "삭제 확인";
+        const message = isGeneral 
+          ? <>'<span className="font-semibold text-amber-400">{persona.name}</span>' 와의 대화 기록을 모두 삭제하시겠습니까? <br/> 이 작업은 되돌릴 수 없습니다.</>
+          : <>'<span className="font-semibold text-amber-400">{persona.name}</span>' 페르소나를 정말 삭제하시겠습니까? <br/> 이 작업은 되돌릴 수 없습니다.</>;
+        const buttonText = isGeneral ? "초기화" : "삭제";
+
+        return (<div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onCancel}><div className="bg-stone-800 rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-sm relative animate-fade-in" onClick={e => e.stopPropagation()}><h2 className="text-lg font-bold font-serif mb-2 text-stone-100">{title}</h2><p className="text-stone-300 mb-6 text-sm">{message}</p><div className="flex gap-4 mt-6"><button type="button" onClick={onCancel} className="w-full px-6 py-2.5 font-semibold text-stone-200 bg-stone-700 rounded-lg transition-colors hover:bg-stone-600 focus:ring-4 focus:ring-stone-600/50 focus:outline-none">취소</button><button type="button" onClick={onConfirm} className="w-full px-6 py-2.5 font-semibold text-white bg-stone-600 rounded-lg transition-colors hover:bg-stone-500 focus:ring-4 focus:ring-stone-500/50 focus:outline-none">{buttonText}</button></div></div></div>);
+      };
       const ApiKeyScreen = ({ setApiKey, error, setError }) => {
         useScreenHeight();
         const [localKey, setLocalKey] = useState('');
-
-        const handleSubmit = async (e) => {
-          e.preventDefault();
-          const seed = localKey.trim();
-          if (!seed) return;
-          
-          const decryptedKey = await decryptApiKey(seed, ENCRYPTED_API_KEY_DATA);
-          if (decryptedKey) {
-            setApiKey(decryptedKey);
-          } else {
-            setError("올바른 증표가 아닙니다.");
-            setLocalKey("");
-          }
+        const handleSubmit = async (e) => { 
+          e.preventDefault(); 
+          const seed = localKey.trim(); 
+          if (seed) { 
+            const key = await decryptApiKey(seed, ENCRYPTED_API_KEY_DATA); 
+            if (key) { 
+              setApiKey(key); 
+            } else { 
+              setError("올바른 증표가 아닙니다."); 
+              setLocalKey(""); 
+            } 
+          } 
         };
-
-        return (
-          <div 
-            className="flex items-center justify-center bg-stone-900 p-4"
-            style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
-          >
-            <div className="w-full max-w-md p-8 text-center bg-stone-800 rounded-2xl shadow-2xl shadow-black/50">
-              <PhilosophyIcon className="w-16 h-16 mx-auto mb-4 text-stone-400" />
-              <h1 className="text-2xl font-bold mb-2 font-serif text-stone-100">Philosophy AI</h1>
-              <p className="mb-6 text-stone-300">입장 시 증표가 필요하오.</p>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <input
-                  type="text"
-                  value={localKey}
-                  onChange={(e) => {
-                    setLocalKey(e.target.value);
-                    if(error) setError(null);
-                  }}
-                  placeholder="증표 입력..."
-                  className="w-full px-4 py-3 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="w-full px-6 py-3 font-semibold text-white bg-stone-600 rounded-lg transition-all duration-200 ease-in-out hover:bg-stone-500 focus:ring-4 focus:ring-stone-500/50 focus:outline-none transform hover:scale-105 active:scale-95 disabled:opacity-50"
-                  disabled={!localKey.trim()}
-                >
-                  입장하기
-                </button>
-              </form>
-              {error && (
-                <p className="mt-4 text-sm text-red-400">{error}</p>
-              )}
-              <p className="mt-4 text-xs text-stone-500">
-                 진리는 없다. 이 명제 또한 그렇다. -나-
-              </p>
-            </div>
-          </div>
-        );
+        return (<div className="flex items-center justify-center bg-stone-900 p-4" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}><div className="w-full max-w-md p-8 text-center bg-stone-800 rounded-2xl shadow-2xl shadow-black/50"><PhilosophyIcon className="w-16 h-16 mx-auto mb-4 text-stone-400" /><h1 className="text-2xl font-bold mb-2 font-serif text-stone-100">Philosophy AI</h1><p className="mb-6 text-stone-300">입장 시 증표가 필요하오.</p><form onSubmit={handleSubmit} className="flex flex-col gap-4"><input type="text" value={localKey} onChange={(e) => { setLocalKey(e.target.value); if(error) setError(null); }} placeholder="증표 입력..." className="w-full px-4 py-3 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none" /><button type="submit" className="w-full px-6 py-3 font-semibold text-white bg-stone-600 rounded-lg transition-all duration-200 ease-in-out hover:bg-stone-500 focus:ring-4 focus:ring-stone-500/50 focus:outline-none transform hover:scale-105 active:scale-95 disabled:opacity-50" disabled={!localKey.trim()}>입장하기</button></form>{error && (<p className="mt-4 text-sm text-red-400">{error}</p>)}<p className="mt-4 text-xs text-stone-500">진리는 없다. 이 명제 또한 그렇다. -나-</p></div></div>);
       };
 
       const App = () => {
         useScreenHeight();
         const chatContainerRef = useRef(null);
-
         const [apiKey, setApiKey] = useState(null);
         const [chat, setChat] = useState(null);
         const [messages, setMessages] = useState([]);
         const [userInput, setUserInput] = useState('');
         const [isLoading, setIsLoading] = useState(false);
         const [error, setError] = useState(null);
-
-        const [personas, setPersonas] = useState(INITIAL_PERSONAS);
-        const [persona, setPersona] = useState(INITIAL_PERSONAS[0].id);
-
+        const [personas, setPersonas] = useState(() => {
+          try { const saved = localStorage.getItem(PERSONAS_STORAGE_KEY); return saved ? JSON.parse(saved) : INITIAL_PERSONAS; } 
+          catch (e) { return INITIAL_PERSONAS; }
+        });
+        const [persona, setPersona] = useState(personas.length > 0 ? personas[0].id : null);
         const [isCreatingPersona, setIsCreatingPersona] = useState(false);
         const [isPersonaCreating, setIsPersonaCreating] = useState(false);
         const [personaCreationError, setPersonaCreationError] = useState(null);
+        const [personaToDelete, setPersonaToDelete] = useState(null);
+        const personaRef = useRef(persona);
+        useEffect(() => { personaRef.current = persona; }, [persona]);
+        useEffect(() => { localStorage.setItem(PERSONAS_STORAGE_KEY, JSON.stringify(personas)); }, [personas]);
+        
+        const handleSetApiKey = (key) => { setApiKey(key); setError(null); };
 
-
-        const handleSetApiKey = (key) => {
-          setApiKey(key);
-          setError(null);
+        const handlePersonaChange = (selectedId) => {
+          setIsLoading(false); 
+          setPersona(selectedId);
+          setChat(null);
+          setMessages([]);
         };
 
-        const handlePersonaSelection = (selectedId) => {
-          if (selectedId === 'create-new') {
-            setPersonaCreationError(null);
-            setIsCreatingPersona(true);
+        const executeDelete = () => {
+          if (!personaToDelete) return;
+
+          if (personaToDelete.id === 'general') {
+            const generalPersona = personas.find(p => p.id === 'general');
+            if (generalPersona) {
+              const newHistory = [{ role: 'model', content: generalPersona.intro }];
+              localStorage.setItem(`${CHAT_HISTORY_KEY_PREFIX}general`, JSON.stringify(newHistory));
+              if (persona === 'general') {
+                setMessages(newHistory);
+                setChat(null); 
+              }
+            }
           } else {
-            setPersona(selectedId);
-            setChat(null);
-            setMessages([]);
+            const newPersonas = personas.filter(p => p.id !== personaToDelete.id);
+            setPersonas(newPersonas);
+            localStorage.removeItem(`${CHAT_HISTORY_KEY_PREFIX}${personaToDelete.id}`);
+            if (persona === personaToDelete.id) {
+              const nextPersonaId = newPersonas.length > 0 ? newPersonas[0].id : null;
+              setPersona(nextPersonaId);
+              setMessages([]);
+              setChat(null);
+            }
           }
+          setPersonaToDelete(null);
         };
 
         const handleCreatePersona = async (personaName, personaDescription) => {
           if (!personaName.trim()) return;
-
-          setIsPersonaCreating(true);
-          setPersonaCreationError(null);
-          
+          setIsPersonaCreating(true); setPersonaCreationError(null);
           try {
             const ai = new GoogleGenAI({ apiKey });
-            const generationPrompt = `You are a prompt engineer creating a persona for a chatbot. The user wants to talk to a character or entity named "${personaName}".
-            User-provided description: "${personaDescription || '별도 설명 없음'}"
-            
-            Your task is to generate a system instruction ('prompt') and an introductory message ('intro') for this persona. Both must be in Korean.
-            
-            - The 'prompt' should be a detailed instruction for the AI, telling it how to embody the key characteristics, knowledge, style, and tone of "${personaName}", based on the user's description and public knowledge about this entity. Be creative and specific.
-            - The 'intro' should be a short, welcoming message from the perspective of "${personaName}", capturing their essence.
-            
-            Provide the output in a single, clean JSON object format with two keys: "prompt" and "intro".`;
-
-            const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: generationPrompt,
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    prompt: { type: Type.STRING, description: "The system instruction for the AI persona in Korean." },
-                    intro: { type: Type.STRING, description: "A short introductory message from the persona in Korean." }
-                  },
-                  required: ['prompt', 'intro']
-                }
-              }
-            });
-            
+            const generationPrompt = `You are a prompt engineer creating a persona for a chatbot. The user wants to talk to a character or entity named "${personaName}". User-provided description: "${personaDescription || '별도 설명 없음'}". Your task is to generate a system instruction ('prompt') and an introductory message ('intro') for this persona. Both must be in Korean. The 'prompt' should be a detailed instruction for the AI, telling it how to embody the key characteristics, knowledge, style, and tone of "${personaName}". The 'intro' should be a short, welcoming message from the perspective of "${personaName}". Provide the output in a single, clean JSON object format with two keys: "prompt" and "intro".`;
+            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: generationPrompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING }, intro: { type: Type.STRING } }, required: ['prompt', 'intro'] } } });
             const personaData = JSON.parse(response.text);
-
-            const newPersona = {
-              id: `custom-${Date.now()}`,
-              name: personaName,
-              prompt: personaData.prompt,
-              intro: personaData.intro,
-            };
-
+            const newPersona = { id: `custom-${Date.now()}`, name: personaName, prompt: personaData.prompt, intro: personaData.intro };
             setPersonas(prev => [...prev, newPersona]);
             setPersona(newPersona.id);
             setChat(null);
             setMessages([]);
             setIsCreatingPersona(false);
-
-          } catch(err) {
-            console.error("Failed to create persona:", err);
-            setPersonaCreationError("페르소나 생성에 실패했습니다. 다시 시도해 주세요.");
-          } finally {
-            setIsPersonaCreating(false);
-          }
+          } catch (err) { console.error("Failed to create persona:", err); setPersonaCreationError("페르소나 생성에 실패했습니다. 다시 시도해 주세요."); } 
+          finally { setIsPersonaCreating(false); }
         };
 
-
         useEffect(() => {
-          if (!apiKey) return;
-
+          if (!apiKey || !persona) return;
           const initializeChat = async () => {
             try {
               const currentPersona = personas.find(p => p.id === persona);
               if (!currentPersona) return;
-              
-              const systemInstruction = currentPersona.prompt;
-              
+              const historyKey = `${CHAT_HISTORY_KEY_PREFIX}${persona}`;
+              const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
+
+              const historyForModel = savedHistory.map(msg => ({ 
+                role: msg.role === 'model' ? 'model' : 'user', 
+                parts: [{ text: msg.content }] 
+              }));
+
               const ai = new GoogleGenAI({ apiKey });
               const chatSession = ai.chats.create({ 
                 model: 'gemini-2.5-pro', 
-                config: { systemInstruction, temperature: 0.8, topP: 0.9 },
+                config: { systemInstruction: currentPersona.prompt, temperature: 0.8, topP: 0.9 },
+                history: historyForModel
               });
-              
               setChat(chatSession);
 
-              if (messages.length === 0) {
-                 setMessages([{ role: 'model', content: currentPersona.intro }]);
+              if (savedHistory.length > 0) {
+                setMessages(savedHistory);
+              } else {
+                const introMessage = { role: 'model', content: currentPersona.intro };
+                const newHistory = [introMessage];
+                setMessages(newHistory);
+                localStorage.setItem(historyKey, JSON.stringify(newHistory));
               }
             } catch (e) {
                 console.error("Failed to initialize chat:", e);
-                setError("대화를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+                setError("대화를 시작할 수 없습니다. API 키가 유효한지 확인해주세요.");
                 setApiKey(null);
-                setChat(null);
-                setMessages([]);
             }
           };
-
           initializeChat();
-        }, [apiKey, persona, personas]);
+        }, [apiKey, persona]);
         
         useEffect(() => {
-          if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, [messages.length, isLoading]);
+          if (chatContainerRef.current) { chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight; }
+        }, [messages]);
+
+        const handleDeleteMessage = (indexToDelete) => {
+          if (isLoading) return;
+          const newMessages = messages.filter((_, index) => index !== indexToDelete);
+          const currentPersonaId = personaRef.current;
+          const historyKey = `${CHAT_HISTORY_KEY_PREFIX}${currentPersonaId}`;
+          localStorage.setItem(historyKey, JSON.stringify(newMessages));
+          setMessages(newMessages);
+          setChat(null);
+        };
 
         const handleSendMessage = async () => {
           if (!userInput.trim() || isLoading || !chat) return;
 
+          const requestPersonaId = persona;
           const userMessage = { role: 'user', content: userInput };
-          setMessages(prev => [...prev, userMessage]);
+          const historyKey = `${CHAT_HISTORY_KEY_PREFIX}${requestPersonaId}`;
+          
           setUserInput('');
           setIsLoading(true);
 
+          const currentHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
+          const historyWithUserMsg = [...currentHistory, userMessage];
+          
+          setMessages(historyWithUserMsg);
+          localStorage.setItem(historyKey, JSON.stringify(historyWithUserMsg));
+
           try {
-            const response = await chat.sendMessage({ message: userInput });
+            const response = await chat.sendMessage({ message: userMessage.content });
             const aiMessage = { role: 'model', content: response.text };
-            setMessages(prev => [...prev, aiMessage]);
+            
+            const finalHistory = [...historyWithUserMsg, aiMessage];
+
+            localStorage.setItem(historyKey, JSON.stringify(finalHistory));
+
+            if (personaRef.current === requestPersonaId) {
+                setMessages(finalHistory);
+            }
           } catch (err) {
             console.error("Send message failed:", err);
-
-            let userFriendlyMessage = '죄송합니다, 순간적으로 문제가 생겼습니다. 질문을 다시 말씀해 주시겠어요?';
-            const errorMessage = (err instanceof Error && err.message) ? err.message.toLowerCase() : '';
+            const errorMessageContent = err.message.includes('429') ? 'API 사용량 한도를 초과했습니다.' : '죄송합니다, 순간적으로 문제가 생겼습니다.';
+            const errorHistory = [...historyWithUserMsg, { role: 'model', content: errorMessageContent }];
             
-            if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-              userFriendlyMessage = 'API 사용량 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.';
-            } else if (errorMessage.includes('503') || errorMessage.includes('unavailable')) {
-              userFriendlyMessage = '현재 AI 모델에 요청이 많아 응답을 받을 수 없습니다. 잠시 후 다시 시도해 주세요.';
-            } else if (errorMessage.includes('500') || errorMessage.includes('internal') || errorMessage.includes('504') || errorMessage.includes('deadline_exceeded')) {
-              userFriendlyMessage = '서버 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+            localStorage.setItem(historyKey, JSON.stringify(errorHistory));
+            
+            if(personaRef.current === requestPersonaId) {
+                setMessages(errorHistory);
             }
-            
-            setMessages(prev => [ ...prev, { role: 'model', content: userFriendlyMessage }]);
           } finally {
-            setIsLoading(false);
+            if (personaRef.current === requestPersonaId) {
+              setIsLoading(false);
+            }
           }
         };
-
-        if (!apiKey) {
-          return <ApiKeyScreen setApiKey={handleSetApiKey} error={error} setError={setError} />;
-        }
+        
+        if (!apiKey) { return <ApiKeyScreen setApiKey={handleSetApiKey} error={error} setError={setError} />; }
+        
+        const currentPersonaData = personas.find(p => p.id === persona);
 
         return (
           <>
-            <PersonaCreationModal 
-              isOpen={isCreatingPersona}
-              onClose={() => setIsCreatingPersona(false)}
-              onCreate={handleCreatePersona}
-              isCreating={isPersonaCreating}
-              error={personaCreationError}
-              setError={setPersonaCreationError}
-            />
-            <div 
-              className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50"
-              style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
-            >
-              <header className="flex items-center justify-between gap-4 p-4 border-b border-stone-700 bg-stone-900/80 backdrop-blur-sm sticky top-0 z-10">
-                <div className="flex items-center gap-4"> 
+            <ConfirmDeleteModal persona={personaToDelete} onConfirm={executeDelete} onCancel={() => setPersonaToDelete(null)} />
+            <PersonaCreationModal isOpen={isCreatingPersona} onClose={() => setIsCreatingPersona(false)} onCreate={handleCreatePersona} isCreating={isPersonaCreating} error={personaCreationError} setError={setPersonaCreationError} />
+            
+            <div className="flex flex-col max-w-3xl mx-auto bg-stone-800 shadow-2xl shadow-black/50" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+              <header className="flex items-center justify-between gap-2 md:gap-4 p-4 border-b border-stone-700 bg-stone-900/80 backdrop-blur-sm sticky top-0 z-10">
+                <div className="flex items-center gap-4 flex-shrink-0"> 
                   <PhilosophyIcon className="w-8 h-8 text-stone-400" /> 
                   <h1 className="text-xl font-serif font-bold text-stone-100 whitespace-nowrap">Philosophy AI</h1>
                 </div>
-                <PersonaSelector selectedPersona={persona} onPersonaChange={handlePersonaSelection} personas={personas} />
+                <div className="flex items-center gap-2">
+                  <PersonaSelector selectedPersona={persona} onPersonaChange={handlePersonaChange} personas={personas} />
+                  <button onClick={() => { setPersonaCreationError(null); setIsCreatingPersona(true); }} className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-stone-700 rounded-md hover:bg-stone-600 transition-colors" aria-label="새 페르소나 만들기"><PlusIcon className="w-5 h-5 text-stone-200" /></button>
+                  <button onClick={() => setPersonaToDelete(currentPersonaData)} className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-stone-700 rounded-md transition-colors hover:bg-stone-600 hover:text-amber-400" aria-label="현재 페르소나 삭제 또는 대화 초기화"><TrashIcon className="w-5 h-5 text-stone-300" /></button>
+                </div>
               </header>
-
               <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                <div className="flex flex-col space-y-4">
-                  {messages.map((msg, index) => (
-                    <ChatMessageComponent 
-                      key={index} 
-                      index={index} 
-                      message={msg} 
-                      isLastMessage={index === messages.length - 1}
-                      chatContainerRef={chatContainerRef}
-                    />
-                  ))}
+                <div className="flex flex-col space-y-8 pb-4">
+                  {messages.map((msg, index) => (<ChatMessageComponent key={index} index={index} message={msg} onDelete={handleDeleteMessage} /> ))}
                   {isLoading && ( 
-                    <div className="flex items-start gap-3 md:gap-4 my-4 justify-start"> 
-                      <PhilosophyIcon className="h-8 w-8 flex-shrink-0 rounded-full p-1.5 bg-stone-700 text-stone-400" /> 
-                      <div className="max-w-xl px-4 py-3 rounded-2xl shadow-md bg-stone-700 text-stone-200 rounded-bl-none"> 
+                    <div className="flex items-start justify-start"> 
+                      <div className="max-w-xl"> 
                         <div className="flex items-center space-x-2"> 
                           <span className="w-2 h-2 bg-stone-400 rounded-full animate-pulse delay-0"></span> 
                           <span className="w-2 h-2 bg-stone-400 rounded-full animate-pulse delay-200"></span> 
@@ -629,14 +410,8 @@
                   )}
                 </div>
               </main>
-
               <footer className="w-full max-w-3xl mx-auto">
-                <ChatInput
-                  input={userInput}
-                  setInput={setUserInput}
-                  handleSend={handleSendMessage}
-                  isLoading={isLoading}
-                />
+                <ChatInput input={userInput} setInput={setUserInput} handleSend={handleSendMessage} isLoading={isLoading} />
               </footer>
             </div>
           </>
@@ -644,15 +419,9 @@
       };
 
       const rootElement = document.getElementById('root');
-      if (!rootElement) {
-        throw new Error("Could not find root element to mount to");
-      }
+      if (!rootElement) { throw new Error("Could not find root element to mount to"); }
       const root = ReactDOM.createRoot(rootElement);
-      root.render(
-        <React.StrictMode>
-          <App />
-        </React.StrictMode>
-      );
+      root.render(<React.StrictMode><App /></React.StrictMode>);
     </script>
   </body>
 </html>
