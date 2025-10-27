@@ -279,7 +279,8 @@
                   {persona.name}
                 </option>
               ))}
-              <option value="create-new" className="font-bold text-stone-300 bg-stone-800 border-t border-stone-600 mt-1 pt-1">
+
+              <option value="create-new" className="font-bold text-stone-300 bg-stone-800 border-t border-stone-600">
                 + 만들기
               </option>
             </select>
@@ -295,16 +296,7 @@
 
         const [name, setName] = useState('');
         const [description, setDescription] = useState('');
-        const nameInputRef = useRef(null);
 
-        useEffect(() => {
-          if (isOpen) {
-            const timer = setTimeout(() => {
-              nameInputRef.current?.focus();
-            }, 250);
-            return () => clearTimeout(timer);
-          }
-        }, [isOpen]);
 
         const handleSubmit = (e) => {
           e.preventDefault();
@@ -324,7 +316,7 @@
                 <label htmlFor="persona-name" className="text-sm font-medium text-stone-300">대상 이름</label>
                 <input
                   id="persona-name"
-                  ref={nameInputRef}
+                  // ref={nameInputRef} // 자동 포커스 로직 제거에 따라 ref도 필요 없어졌습니다.
                   type="text"
                   value={name}
                   onChange={(e) => {
