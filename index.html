@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -279,7 +280,7 @@
                   {persona.name}
                 </option>
               ))}
-              <option value="create-new" className="font-bold text-stone-300 bg-stone-800 border-t border-stone-600 mt-1 pt-1">
+              <option value="create-new" className="font-bold text-stone-300 bg-stone-800">
                 + 만들기
               </option>
             </select>
@@ -320,7 +321,7 @@
                     setName(e.target.value);
                     if(error) setError(null);
                   }}
-                  placeholder="예: 인물,사물,추상..."
+                  placeholder="인물,사물,추상 등"
                   className="w-full mt-1 px-4 py-3 bg-stone-900 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:ring-2 focus:ring-stone-500 focus:outline-none"
                   disabled={isCreating}
                   autoFocus
